@@ -9,8 +9,14 @@ FIFA18data <- read.csv("FIFA 18 Data.csv")
 str(FIFA18data)
 
 FIFA18data1 <- FIFA18data%>%
-  select(-Flag,-Club.Logo, -Photo)%>%
-  rename("Value_in_M" = Value,
+  select(-X,-Flag,-Club.Logo, -Photo, -ID, # removing nonstatsitical player info
+         -GK.diving, -GK.handling, -GK.kicking, -GK.positioning, -GK.reflexes,
+         -CAM, -CB, -CDM, -CF,-CM,
+         -LAM, -LB, -LCB, -LCM, -LDM,-LF, -LM, -LS, -LW, -LWB, 
+         -Preferred.Positions, 
+         -RAM, -RB, -RCB, -RCM, -RDM, -RF, -RM, -RS, -RW, -RWB,
+         -ST)%>% # removing other position stats
+  rename("Market_Value_in_M" = Value,
          "Wage_in_K" = Wage)%>%
   filter(Club == "Arsenal"|
            Club == "Bournemouth"|
@@ -33,63 +39,30 @@ FIFA18data1 <- FIFA18data%>%
            Club == "West Bromwich Albion"|
            Club == "West Ham United")
 
-FIFA18data1$Value_in_M <- gsub("[^0-9A-Za-z///' ]"," "  ,FIFA18data1$Value_in_M,ignore.case = TRUE)
+# removing euro curency symbol
+FIFA18data1$Market_Value_in_M <- gsub("[^0-9A-Za-z///' ]"," "  ,FIFA18data1$Market_Value_in_M,ignore.case = TRUE)
 FIFA18data1$Wage_in_K <- gsub("[^0-9A-Za-z///' ]"," "  ,FIFA18data1$Wage_in_K,ignore.case = TRUE)
 
+# trimming leading/trailing spaces
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
-FIFA18data1$Value_in_M <- trim(FIFA18data1$Value_in_M)
+FIFA18data1$Market_Value_in_M <- trim(FIFA18data1$Market_Value_in_M)
 FIFA18data1$Wage_in_K <- trim(FIFA18data1$Wage_in_K)
 
-FIFA18data1$Value_in_M <- gsub(" ","."  ,FIFA18data1$Value_in_M,ignore.case = TRUE)
-FIFA18data1$Value_in_M <- gsub("M",""  ,FIFA18data1$Value_in_M,ignore.case = TRUE)
+# getting rid of M & K so only numbers
+FIFA18data1$Market_Value_in_M <- gsub(" ","."  ,FIFA18data1$Market_Value_in_M,ignore.case = TRUE)
+FIFA18data1$Market_Value_in_M <- gsub("M",""  ,FIFA18data1$Market_Value_in_M,ignore.case = TRUE)
 FIFA18data1$Wage_in_K <- gsub("K",""  ,FIFA18data1$Wage_in_K,ignore.case = TRUE)
 
-
-
-
-
-
-
+# counting 20 clubs to make sure there 
 unique(FIFA18data1$Club)
 
+# str of variables to convert all to numeric that are character
+str(FIFA18data1)
+
+#MAKE ALL VARIABLES QUANTITATIVE - ecept nationality & club
+
+# DESCRIPTIVE / EXPLORATORY ANALYSIS
+# distribution of palyer market value in EPL
+hist(FIFA18data1$Value_in_M)
 
 
-#---OLD CODE BELOW HERE
-
-# renaming columns from both so can merge / keeping naming conventions consistent
-EPLdata1 <- EPLdata%>%
-  rename("Name" = name, "Nationality" = nationality, "Club" = club)
-
-# removingt special characters
-EPLdata1$Club <- gsub("[+]", " ", EPLdata1$Club)
-FIFA18data1$Name <- gsub("[.]", " ", FIFA18data1$Name)
-
-FIFA18data1$Name <- gsub("[^0-9A-Za-z///' ]"," "  ,FIFA18data1$Name,ignore.case = TRUE)
-EPLdata1$Name <- gsub("[^0-9A-Za-z///' ]"," "  ,EPLdata1$Name,ignore.case = TRUE)
-
-EPLdata1$Name <- toupper(EPLdata1$Name)
-FIFA18data1$Name <- toupper(FIFA18data1$Name)
-
-
-
-# converting all factors to characters in both datasets for merge
-EPLdata2 <- EPLdata1
-FIFA18data2 <- FIFA18data1
-
-FIFA18data2$Club <- as.character(FIFA18data2$Club)
-
-# removing everything before space because naming not consistent in both datasets
-# split on space and only have first name
-EPLdata2$Name <- sub(".*? ", "", EPLdata2$Name)
-FIFA18data2$Name <- sub(".*? ", "", FIFA18data2$Name)
-
-# replacing +'s as spaces
-
-
-Test <-
-  inner_join(EPLdata2, FIFA18data2, by = c("Name" = "Name", "Club" = "Club"))
-
-EPLdata3 <- unnest(EPLdata2)
-
-View(EPLdata2)
-View(FIFA18data2)
