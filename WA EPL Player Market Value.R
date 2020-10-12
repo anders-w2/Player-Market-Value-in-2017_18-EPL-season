@@ -8,7 +8,7 @@ FIFA18data <- read.csv("FIFA 18 Data.csv")
 # examining dataset
 str(FIFA18data)
 
-FIFA18data1 <- FIFA18data%>%
+EPLdata <- FIFA18data%>%
   select(-X,-Flag,-Club.Logo, -Photo, -ID, # removing nonstatsitical player info
          -GK.diving, -GK.handling, -GK.kicking, -GK.positioning, -GK.reflexes,
          -CAM, -CB, -CDM, -CF,-CM,
@@ -40,29 +40,54 @@ FIFA18data1 <- FIFA18data%>%
            Club == "West Ham United")
 
 # removing euro curency symbol
-FIFA18data1$Market_Value_in_M <- gsub("[^0-9A-Za-z///' ]"," "  ,FIFA18data1$Market_Value_in_M,ignore.case = TRUE)
-FIFA18data1$Wage_in_K <- gsub("[^0-9A-Za-z///' ]"," "  ,FIFA18data1$Wage_in_K,ignore.case = TRUE)
+EPLdata$Market_Value_in_M <- gsub("[^0-9A-Za-z///' ]"," "  ,EPLdata$Market_Value_in_M,ignore.case = TRUE)
+EPLdata$Wage_in_K <- gsub("[^0-9A-Za-z///' ]"," "  ,EPLdata$Wage_in_K,ignore.case = TRUE)
 
 # trimming leading/trailing spaces
 trim <- function (x) gsub("^\\s+|\\s+$", "", x)
-FIFA18data1$Market_Value_in_M <- trim(FIFA18data1$Market_Value_in_M)
-FIFA18data1$Wage_in_K <- trim(FIFA18data1$Wage_in_K)
+EPLdata$Market_Value_in_M <- trim(EPLdata$Market_Value_in_M)
+EPLdata$Wage_in_K <- trim(EPLdata$Wage_in_K)
 
 # getting rid of M & K so only numbers
-FIFA18data1$Market_Value_in_M <- gsub(" ","."  ,FIFA18data1$Market_Value_in_M,ignore.case = TRUE)
-FIFA18data1$Market_Value_in_M <- gsub("M",""  ,FIFA18data1$Market_Value_in_M,ignore.case = TRUE)
-FIFA18data1$Wage_in_K <- gsub("K",""  ,FIFA18data1$Wage_in_K,ignore.case = TRUE)
+EPLdata$Market_Value_in_M <- gsub(" ","."  ,EPLdata$Market_Value_in_M,ignore.case = TRUE)
+EPLdata$Market_Value_in_M <- gsub("M",""  ,EPLdata$Market_Value_in_M,ignore.case = TRUE)
+EPLdata$Wage_in_K <- gsub("K",""  ,EPLdata$Wage_in_K,ignore.case = TRUE)
 
 # counting 20 clubs to make sure there 
-unique(FIFA18data1$Club)
+unique(EPLdata$Club)
 
 # str of variables to convert all to numeric that are character
-str(FIFA18data1)
+str(EPLdata)
 
-#MAKE ALL VARIABLES QUANTITATIVE - ecept nationality & club
+# making all variables except club and nationality and name numeric
+EPLdata2 <- EPLdata
+EPLdata2[cols] <- lapply(EPLdata2[cols], as.numeric)
+str(EPLdata2)
+
+# checking for missing data values = 167
+sum(is.na(EPLdata2)) 
+
+sapply(EPLdata2, function(x) sum(is.na(x))) # all in Market value so not good
+
+EPLdata3 <- EPLdata2%>%
+  filter(Market_Value_in_M != "NA")
 
 # DESCRIPTIVE / EXPLORATORY ANALYSIS
-# distribution of palyer market value in EPL
-hist(FIFA18data1$Value_in_M)
+
+# GENERAL DISTRIBUTIONS
+str(EPLdata3$Market_Value_in_M)
+hist(as.numeric(EPLdata3$Market_Value_in_M)) # make look nicer
+
+hist(as.numeric(EPLdata3$Wage_in_K)) # make look nicer
+
+hist(as.numeric(EPLdata3$Age)) # make look nicer
+
+hist(as.numeric(EPLdata3$Overall)) # make look nicer / make 2nd colored 
+
+ggplot(EPLdata3, aes(as.numeric(Overall), fill = Club, color = "Black"))+
+  geom_histogram()
+
+# DO TOP 6 clubs graphs 
+ggplot(EPLdata3, aes(as.numeric(EPLdata3$Marketv))
 
 
