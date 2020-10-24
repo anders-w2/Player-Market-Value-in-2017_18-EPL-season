@@ -3,44 +3,33 @@ library(ggplot2)
 library(caret)
 library(tidyverse)
 library(tibble)
+library(rpart.plot)
+library(knitr)
+library(glmnet)
+library(car)
+
 setwd("~/Desktop/Denison/Senior Year/Fall 2020/DA 401/Player-Market-Value-in-2017_18-EPL-season")
-FIFA18data <- read.csv("FIFA 18 Data.csv")
+EPLdata <- read.csv("EPLdata.csv")
 
 # DATA PRE-PROCESSING
 
 # examining dataset
-str(FIFA18data)
+str(EPLdata)
 
-EPLdata <- FIFA18data%>%
-  select(-X,-Flag,-Club.Logo, -Photo, -ID, # removing nonstatsitical player info
+# seeing positons
+'
+EPLdatTest <- EPLdata%>%
+  group_by(Preferred.Positions)%>%
+  summarise(n = n())
+'
+  
+EPLdata <- EPLdata%>%
+  rename("Position" = Preferred.Positions)%>%
+  select(-X,-Flag,-Club.Logo, -Photo, -ID,
          -GK.diving, -GK.handling, -GK.kicking, -GK.positioning, -GK.reflexes,
          -CAM, -CB, -CDM, -CF,-CM,
-         -LAM, -LB, -LCB, -LCM, -LDM,-LF, -LM, -LS, -LW, -LWB, 
-         -Preferred.Positions, 
-         -RAM, -RB, -RCB, -RCM, -RDM, -RF, -RM, -RS, -RW, -RWB,
-         -ST)%>% # removing other position stats
-  rename("Market_Value_in_M" = Value,
-         "Wage_in_K" = Wage)%>%
-  filter(Club == "Arsenal"|
-           Club == "Bournemouth"|
-           Club == "Brighton & Hove Albion"|
-           Club == "Burnley"|
-           Club == "Chelsea"|
-           Club == "Crystal Palace"|
-           Club == "Everton"|
-           Club == "Huddersfield Town"|
-           Club == "Leicester City"|
-           Club == "Liverpool"|
-           Club == "Manchester City"|
-           Club == "Manchester United"|
-           Club == "Newcastle United"|
-           Club == "Southampton"|
-           Club == "Stoke City"|
-           Club == "Swansea City"|
-           Club == "Tottenham Hotspur"|
-           Club == "Watford"|
-           Club == "West Bromwich Albion"|
-           Club == "West Ham United")
+         -LAM, -LB, -LCB, -LCM, -LDM,-LF, -LM, -LS, -LW, -LWB,
+         -RAM, -RB, -RCB, -RCM, -RDM, -RF, -RM, -RS, -RW, -RWB,-ST)
 
 # removing "+[0-9]" - + sign/- followed by any digits b/c was recognizing as NA before
 EPLdata <- data.frame(lapply(EPLdata, function(x) {
@@ -87,7 +76,7 @@ sapply(EPLdata2, function(x) sum(is.na(x)))
 
 # checking to see if duplicate player entries / removing 5 duplicates
 sum(duplicated(EPLdata2$Name)) 
-EPLdata3 <- EPLdata3[!duplicated(EPLdata2$Name), ]
+EPLdata3 <- EPLdata2[!duplicated(EPLdata2$Name), ]
 
 # str of variables to convert all to numeric that are character
 str(EPLdata3)
@@ -258,12 +247,31 @@ EPLdata5 <-  filter(EPLdata4, !(Name %in% allgks))
 # checking to make sure removed all 71 (based on obs length in both datasets)
 #645-574 = 71
 
-cor(EPLdata5)
+#checking to see if Club and Top6 are correlated but aren't (-0.1)
+
+# **NEED TO MAKE 3 SEPARATE MODELS: DF + MF + FW***
+
+# VIF for feature selection
+fitvif <- lm(Market_Value_in_M ~. -Name -top6, data =EPLdata5)
+kable(vif(fitvif),align = 'c')
 
 
+# create training + test set 
+set.seed(1) #Set seed for replicability
+part = createDataPartition(EPLdata5$Market_Value_in_M, p = 0.7, list=FALSE)
+training = EPLdata5[part,]
+test = EPLdata5[-part,]
 
+# linear multivariate regression
+lm_model = train(salary ~ R + H + HR + RBI + SO + X2B + X3B + SB + IBB, 
+                 data = training, 
+                 method = "lm")
+lm_pred = predict(lm_model,test)
+sqrt(mean((lm_pred-test$salary)^2)) #RMSE for linear regression
 
-  
-  
+# Random forrests
+ctrl = trainControl(method="repeatedcv",number=10,repeats=3)
+
+# Ridge regression i
 
 
