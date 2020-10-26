@@ -16,20 +16,14 @@ EPLdata <- read.csv("EPLdata.csv")
 # examining dataset
 str(EPLdata)
 
-# seeing positons
-'
-EPLdatTest <- EPLdata%>%
-  group_by(Preferred.Positions)%>%
-  summarise(n = n())
-'
-  
+# removing variables
 EPLdata <- EPLdata%>%
   rename("Position" = Preferred.Positions)%>%
   select(-X,-Flag,-Club.Logo, -Photo, -ID,
          -GK.diving, -GK.handling, -GK.kicking, -GK.positioning, -GK.reflexes,
          -CAM, -CB, -CDM, -CF,-CM,
          -LAM, -LB, -LCB, -LCM, -LDM,-LF, -LM, -LS, -LW, -LWB,
-         -RAM, -RB, -RCB, -RCM, -RDM, -RF, -RM, -RS, -RW, -RWB,-ST)
+         -RAM, -RB, -RCB, -RCM, -RDM, -RF, -RM, -RS, -RW, -RWB,-ST, -X.1)
 
 # removing "+[0-9]" - + sign/- followed by any digits b/c was recognizing as NA before
 EPLdata <- data.frame(lapply(EPLdata, function(x) {
@@ -67,7 +61,7 @@ str(EPLdata)
 # making all variables except club and nationality and name numeric
 EPLdata2 <- EPLdata
 
-cols = c(2, 4, 5, 7:38)    
+cols = c(3, 5,6 ,8:38)    
 EPLdata2[,cols] = apply(EPLdata2[,cols], 2, function(x) as.numeric(as.character(x)));
 
 # checking for missing data values = 0
@@ -81,168 +75,45 @@ EPLdata3 <- EPLdata2[!duplicated(EPLdata2$Name), ]
 # str of variables to convert all to numeric that are character
 str(EPLdata3)
 
-# adding if one of Top 6 teams as new column
-EPLdata4 <- EPLdata3%>%
-  mutate(top6 = ifelse(Club == "Arsenal"|
-           Club == "Chelsea"|
-           Club == "Liverpool"|
-           Club == "Manchester City"|
-           Club == "Manchester United"|
-           Club == "Tottenham Hotspur", 1, 0))
 
-# checking to make sure new column worked
-"EPLdataTest <- EPLdata4%>%
-  select(Club, EPLtop6)
+# -----EXPLORATORY ANALYSIS------
 
-EPLdataTest1 <- EPLdataTest%>%
-  group_by(Club)%>%
-  summarise(Check = mean(EPLtop6))
-"
+# seeing distrtibution
+PositionDistTable <- EPLdata%>%
+  group_by(Position)%>%
+  summarise(n = n())
 
-# EXPLORATORY ANALYSIS
 # descriptive statistics for age, overal, wage, mv
 AgeOverallWageMV <- EPLdata4%>%
   select(Age, Overall, Wage_in_K, Market_Value_in_M)
 
 summary(AgeOverallWageMV)
 
-#club market value table
-clubMVtable <- EPLdata4%>%
-  group_by(Club)%>%
-  summarise(medianMV = median(Market_Value_in_M),
-            avgMV = mean(Market_Value_in_M),
-            maxMV = max(Market_Value_in_M),
-            minMV = min(Market_Value_in_M))
+# variance in MV by Position
+EPLdata4%>%
+  ggplot(aes(x = reorder(Position, Market_Value_in_M, FUN = median), y = Market_Value_in_M))+
+  geom_boxplot()
 
-#club market value table
-ageMVtable <- EPLdata4%>%
-  group_by(Age)%>%
-  summarise(medianMV = median(Market_Value_in_M),
-            avgMV = mean(Market_Value_in_M),
-            maxMV = max(Market_Value_in_M),
-            minMV = min(Market_Value_in_M))
+# variance in MV by Age
+EPLdata4%>%
+  ggplot(aes(x = reorder(Age, Market_Value_in_M, FUN = median), y = Market_Value_in_M))+
+  geom_boxplot()
 
-# epl top 6 table
-EPLtop6 <- EPLdata4%>%
-  filter(Club == "Arsenal"|
-           Club == "Chelsea"|
-           Club == "Liverpool"|
-           Club == "Manchester City"|
-           Club == "Manchester United"|
-           Club == "Tottenham Hotspur")
-
-EPLtop6mvTable <- EPLtop6%>%
-  group_by(Club)%>%
-  summarise(medianMV = median(Market_Value_in_M),
-            avgMV = mean(Market_Value_in_M),
-            maxMV = max(Market_Value_in_M),
-            minMV = min(Market_Value_in_M))
-
-# EPl other 14 table
-EPLtop6vother14 <- EPLdata4%>%
-  group_by(top6)%>%
-  summarise(medianMV = median(Market_Value_in_M),
-            avgMV = mean(Market_Value_in_M),
-            maxMV = max(Market_Value_in_M),
-            minMV = min(Market_Value_in_M))%>%
-  mutate(ClubType = if_else(top6 == 1, "Top6", "Other14"))%>%
-  select(-top6)
-EPLtop6vother14 <- EPLtop6vother14[, c(5, 1, 2, 3, 4)]
-
-# market value overall
+# market value overall vs top 6 clubs
 genMVdist <- hist(as.numeric(EPLdata4$Market_Value_in_M),col='grey',alphborder=T, freq = TRUE, main = "Market Value in the 2017-18 EPL Season",xlab = "Market Value (Millions)")
 top6MVdist <- hist(as.numeric(EPLtop6$Market_Value_in_M),add=T,col=scales::alpha('green', .5),border=T, freq = TRUE)
 
-# age
-genAGEdist <- hist(as.numeric(EPLdata4$Age),col='skyblue',alphborder=T, freq = TRUE, main = "Age in the 2017-18 EPL Season",xlab = "Age (Years)")
 
-# wages
-wageDistPrep <- EPLdata4%>%
-  group_by(top6)%>%
-  summarise(total_wage = sum(Wage_in_K))%>%
-  mutate(type = if_else(top6 == 1, "top6", "other14"))
+#club market value table
+clubMVtable <- EPLdata4%>%
+  group_by(Club)%>%
+  summarise(medianMV = median(Market_Value_in_M))
 
-# wages % table
-wageDist <- wageDistPrep%>%
-  group_by(type)%>%
-  summarise(perct_of_entire_leage_wages = round((total_wage/(19421+18192))*(100)))
-
-# MODEL BUILDING
+# ------MODEL BUILDING------
 
 #removing 71 goalkeepers after exploratory analysis
-allgks <- c("D. Ospina"
-            ,'A. Boruc'
-            ,'P. Čech'
-            ,'A. Begović'
-            ,'A. Federici'
-            ,'A. Ramsdale'
-            ,'J. Holmes'
-            ,"P. O'Flaherty"
-            ,'M. Ryan'
-            ,'N. Mäenpää'
-            ,'Robert Sanchez'
-            ,'T. Krul'
-            , 'A. Legzdins'
-            , 'A. Lindegaard'
-            , 'M. Howarth'
-            , 'N. Pope'
-            , 'Eduardo'
-            , 'M. Delač'
-            , 'T. Courtois'
-            , 'W. Caballero'
-            , 'J. Speroni'
-            , 'W. Hennessey'
-            , 'J. Pickford'
-            , 'Joel Robles'
-            , 'M. Stekelenburg'
-            , 'J. Lössl'
-            , 'R. Schofield'
-            , 'B. Hamer'
-            , 'D. Iversen'
-            , 'E. Jakupović'
-            , 'K. Schmeichel'
-            , 'A. Bogdán'
-            , 'L. Karius'
-            , 'S. Mignolet'
-            , 'D. Ward'
-            , 'A. Muric'
-            , 'C. Bravo'
-            , 'Ederson'
-            , 'De Gea'
-            , 'Joel Pereira'
-            , 'S. Romero'
-            , 'R. Elliot'
-            , 'K. Darlow'
-            , 'F. Woodman'
-            , 'F. Forster'
-            , 'A. McCarthy'
-            , 'S. Taylor'
-            , 'J. Butland'
-            , 'L. Grant'
-            , 'J. Haugaard'
-            , 'D. Gyollai'
-            , 'L. Fabiański'
-            , 'K. Nordfeldt'
-            , 'E. Mulder'
-            , 'G. Zabret'
-            , 'H. Lloris'
-            , 'M. Vorm'
-            , 'P. Gazzaniga'
-            , 'B. Austin'
-            , 'A. Whiteman'
-            , 'O. Karnezis'
-            , 'Gomes'
-            , 'D. Bachmann'
-            , 'B. Foster'
-            , 'B. Myhill'
-            , 'A. Palmer'
-            , 'B. House'
-            , 'E. Ross'
-            , 'J. Hart'
-            , 'Adrián'
-            , 'N. Trott')
-
-EPLdata5 <-  filter(EPLdata4, !(Name %in% allgks))
+EPLdata5 <-  EPLdata4%>%
+  filter(Position != "GK")
 
 # checking to make sure removed all 71 (based on obs length in both datasets)
 #645-574 = 71
@@ -263,11 +134,13 @@ training = EPLdata5[part,]
 test = EPLdata5[-part,]
 
 # linear multivariate regression
-lm_model = train(salary ~ R + H + HR + RBI + SO + X2B + X3B + SB + IBB, 
+'
+lm_model = train(y ~ explanaotry variables, 
                  data = training, 
                  method = "lm")
 lm_pred = predict(lm_model,test)
-sqrt(mean((lm_pred-test$salary)^2)) #RMSE for linear regression
+sqrt(mean((lm_pred-test$Market_Value_in_M)^2)) #RMSE for linear regression
+'
 
 # Random forrests
 ctrl = trainControl(method="repeatedcv",number=10,repeats=3)
