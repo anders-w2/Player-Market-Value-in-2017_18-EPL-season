@@ -64,6 +64,15 @@ EPLdata2 <- EPLdata
 cols = c(3, 5,6 ,8:38)    
 EPLdata2[,cols] = apply(EPLdata2[,cols], 2, function(x) as.numeric(as.character(x)));
 
+# checking results of manipulation
+str(EPLdata2)
+
+# still need to convert volley's from factor to numeric
+EPLdata2$Volleys <- as.numeric(as.character(EPLdata2$Volleys))
+
+# checking results of conversion
+str(EPLdata2$Volleys)
+
 # checking for missing data values = 0
 sum(is.na(EPLdata2)) 
 sapply(EPLdata2, function(x) sum(is.na(x))) 
@@ -75,76 +84,119 @@ EPLdata3 <- EPLdata2[!duplicated(EPLdata2$Name), ]
 # str of variables to convert all to numeric that are character
 str(EPLdata3)
 
-
 # -----EXPLORATORY ANALYSIS------
 
 # seeing distrtibution
-PositionDistTable <- EPLdata%>%
+PositionDistTable <- EPLdata3%>%
   group_by(Position)%>%
   summarise(n = n())
 
 # descriptive statistics for age, overal, wage, mv
-AgeOverallWageMV <- EPLdata4%>%
+AgeOverallWageMV <- EPLdata3%>%
   select(Age, Overall, Wage_in_K, Market_Value_in_M)
 
 summary(AgeOverallWageMV)
 
 # variance in MV by Position
-EPLdata4%>%
+EPLdata3%>%
   ggplot(aes(x = reorder(Position, Market_Value_in_M, FUN = median), y = Market_Value_in_M))+
   geom_boxplot()
 
 # variance in MV by Age
-EPLdata4%>%
+EPLdata3%>%
   ggplot(aes(x = reorder(Age, Market_Value_in_M, FUN = median), y = Market_Value_in_M))+
   geom_boxplot()
 
 # market value overall vs top 6 clubs
-genMVdist <- hist(as.numeric(EPLdata4$Market_Value_in_M),col='grey',alphborder=T, freq = TRUE, main = "Market Value in the 2017-18 EPL Season",xlab = "Market Value (Millions)")
+EPLtop6 <- EPLdata3%>%
+  filter(Club == "Arsenal"|
+           Club == "Chelsea"|
+           Club == "Liverpool"|
+           Club == "Manchester City"|
+           Club == "Manchester United"|
+           Club == "Tottenham Hotspur")
+
+genMVdist <- hist(as.numeric(EPLdata3$Market_Value_in_M),col='grey',alphborder=T, freq = TRUE, main = "Market Value in the 2017-18 EPL Season",xlab = "Market Value (Millions)")
 top6MVdist <- hist(as.numeric(EPLtop6$Market_Value_in_M),add=T,col=scales::alpha('green', .5),border=T, freq = TRUE)
 
 
 #club market value table
-clubMVtable <- EPLdata4%>%
+clubMVtable <- EPLdata3%>%
   group_by(Club)%>%
   summarise(medianMV = median(Market_Value_in_M))
 
 # ------MODEL BUILDING------
 
 #removing 71 goalkeepers after exploratory analysis
-EPLdata5 <-  EPLdata4%>%
+EPLdata3$Position <- trim(EPLdata3$Position)
+
+EPLdata4 <-  EPLdata3%>%
   filter(Position != "GK")
 
 # checking to make sure removed all 71 (based on obs length in both datasets)
 #645-574 = 71
 
-#checking to see if Club and Top6 are correlated but aren't (-0.1)
-
-# **NEED TO MAKE 3 SEPARATE MODELS: DF + MF + FW***
-
-# VIF for feature selection
-fitvif <- lm(Market_Value_in_M ~. -Name -top6, data =EPLdata5)
-kable(vif(fitvif),align = 'c')
-
-
 # create training + test set 
 set.seed(1) #Set seed for replicability
-part = createDataPartition(EPLdata5$Market_Value_in_M, p = 0.7, list=FALSE)
-training = EPLdata5[part,]
-test = EPLdata5[-part,]
+part = createDataPartition(EPLdata4$Market_Value_in_M, p = 0.7, list=FALSE)
+training = EPLdata4[part,]
+test = EPLdata4[-part,]
 
-# linear multivariate regression
-'
-lm_model = train(y ~ explanaotry variables, 
-                 data = training, 
-                 method = "lm")
-lm_pred = predict(lm_model,test)
-sqrt(mean((lm_pred-test$Market_Value_in_M)^2)) #RMSE for linear regression
-'
+# full model
+fullMod <- lm(Market_Value_in_M ~. -Name, data =training)
+summary(fullMod)
 
-# Random forrests
-ctrl = trainControl(method="repeatedcv",number=10,repeats=3)
+# sample multivariate regression exploring relationships: Club / MV , Nationality / MV
+clubMod <- lm (Market_Value_in_M ~ Club, data = training)
+summary(clubMod)
 
-# Ridge regression i
+nationalityMod <- lm (Market_Value_in_M ~ Nationality, data = training)
+summary(nationalityMod)
+
+# full multivariate model w/out Club & Nationality
+training1 <- training%>%
+  select(-Name, -Club, -Nationality)
+
+test1 <- test%>%
+  select(-Name, -Club, -Nationality)
+
+lm_mod <- lm(Market_Value_in_M ~., data =training1)
+summary(lm_mod)
+
+# making predictions w/multivariate model
+lm_pred = predict(lm_mod,test1)
+sqrt(mean((lm_pred-test1$Market_Value_in_M)^2)) #RMSE for linear regression
+
+# Random forrest
+trctrl = trainControl(method = "oob") 
+rf_mod = train(Market_Value_in_M ~., 
+                            data =training1,
+                            method = "rf", # rf
+                            trControl = trctrl,
+                            tuneLength = 8, 
+                            ntree = 200, 
+                            importance = TRUE) 
+
+
+plot(rf_mod$results$mtry,rf_mod$results$RMSE)
+
+rf_pred = predict(rf_mod,test1)
+#RMSE for random forest
+sqrt(mean((rf_pred-test1$Market_Value_in_M)^2)) 
+# > no-free lunch to see what method works better for each problem
+rf_importance = varImp(rf_mod)
+plot(Importance2)
+
+
+# Ridge regression ---
+
+
+
+# Make table of predictions for each and how accurate are / include RMSE ---
+
+
+
+# do assumption checks / plots & outputs of each model for validations
+
 
 
