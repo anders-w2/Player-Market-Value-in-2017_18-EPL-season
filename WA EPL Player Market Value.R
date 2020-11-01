@@ -404,7 +404,13 @@ df_test <- test1%>%
     df_ridge_compare <- as.data.frame(df_ridge_compare)
     df_ridge_rmse <- sqrt(mean((df_ridge_pred-df_test$Market_Value_in_M)^2))
     df_ridge_accuracy <- mean (apply(df_ridge_compare, 1, min)/apply(df_ridge_compare, 1, max))
-    
+
+#------------------------------------------------
+#
+# RESULTS TABLES
+#
+#------------------------------------------------    
+
 # table for all position 3 models' accuracy / RMSE
 all_Comparison = data.frame(matrix(ncol = 3, nrow = 3))
 colnames(all_Comparison) = c('Model','RMSE', 'Accuracy')
