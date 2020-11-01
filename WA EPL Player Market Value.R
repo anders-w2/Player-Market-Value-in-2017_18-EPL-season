@@ -362,7 +362,9 @@ df_test <- test1%>%
     plot(df_rf_importance)
     df_rf_rmse <- sqrt(mean((df_rf_pred-df_test$Market_Value_in_M)^2)) 
     df_rf_accuracy <- mean (apply(df_rf_compare, 1, min)/apply(df_rf_compare, 1, max))
-    
+ 
+## Ridge regression 
+       
   # all positions Ridge regression model
   ridge_mod <- linearRidge(Market_Value_in_M ~ ., data = training1)
     
