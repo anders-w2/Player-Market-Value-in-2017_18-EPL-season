@@ -1,4 +1,2 @@
 # Player-Market-Value-in-2017_18-EPL-season
-This is a repository anaylzing predictors of Player Market Value in the 2017-18 English Premier League season
-
-Data: 
+This is a README for analyzing the impact predictors obtained from the soccer video game, FIFA 18 have on predicting player market value in the English Premier League during the 2017-18 season. The files in this repository are EPLdata.csv which is the dataset used for this analysis and WA EPL Player Market Value.R which contains the code used for the analysis in R.
